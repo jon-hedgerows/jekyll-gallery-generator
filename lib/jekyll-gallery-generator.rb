@@ -237,6 +237,8 @@ module Jekyll
           @images.sort!
         elsif sort_field == "name"
           @images.sort! {|a,b| cmp = a.name <=> b.name}
+        elsif sort_field == "shuffle"
+          @images.shuffle!
         else
           puts "Invalid sort_field for gallery #{gallery_name}: #{sort_field}. Sorting by datetime."
           @images.sort!
