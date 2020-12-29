@@ -16,6 +16,8 @@ module Jekyll
     def initialize(name, base)
       @name = name
       @path = File.join(base, name)
+      self.getmetadata(@path)
+      puts "Image at #{path}, size #{width}x#{height}"
     end
 
     def <=>(b)
@@ -31,6 +33,41 @@ module Jekyll
         @date_time = 0
       end
       return @date_time
+    end
+
+    def getmetadata(path)
+      begin
+        img = Image.ping(path)[0]
+        @width = img.columns
+        @height = img.rows
+      rescue Exception => e
+        puts "Error reading image dimensions for #{@path}: #{e}"
+      end
+    end
+
+    def width
+      return @width if defined? @width
+      return 0
+    end
+
+    def height
+      return @height if defined? @height
+      return 0
+    end
+
+    def thumbwidth
+      return @thumbwidth if defined? @thumbwidth
+      return 0
+    end
+
+    def thumbheight
+      return @thumbheight if defined? @thumbheight
+      return 0
+    end
+
+    def setthumbsize(x, y)
+      @thumbwidth = x
+      @thumbheight = y
     end
 
     def exif
@@ -56,6 +93,10 @@ module Jekyll
         'name' => @name,
         'src' => @name,
         'date_time' => @date_time,
+        'width' => @width,
+        'height' => @height,
+        'thumbwidth' => @thumbwidth,
+        'thumbheight' => @thumbheight,
         'exif' => @exif && @exif.to_hash.collect{|k,v| [k.to_s, v]}.to_h,
       }
     end
@@ -216,7 +257,9 @@ module Jekyll
             m_image = ImageList.new(image.path)
             m_image.auto_orient!
             m_image.send("resize_to_#{scale_method}!", max_size_x, max_size_y)
-            puts "Writing thumbnail to #{thumb_path}"
+            #thumbnail size x by y:  m_image.columns by m_image.rows
+            image.setthumbsize(m_image.columns, m_image.rows)
+            puts "Writing thumbnail to #{thumb_path}, size #{m_image.columns}x#{m_image.rows}"
             m_image.write(thumb_path)
           rescue Exception => e
             printf "Error generating thumbnail for #{image.path}: #{e}\r"
@@ -225,6 +268,11 @@ module Jekyll
           if i % 5 == 0
             GC.start
           end
+        else
+          # don't need to regenerate the thumbnail, but do need its size
+          m_image = Image.ping(thumb_path)[0]
+          image.setthumbsize(m_image.columns, m_image.rows)
+          puts "Existing thumbnail at #{thumb_path}, size #{m_image.columns}x#{m_image.rows}"
         end
 
         printf "#{gallery_name} #{i+1}/#{entries.length} images\r"
